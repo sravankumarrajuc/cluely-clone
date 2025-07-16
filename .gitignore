@@ -8,24 +8,35 @@ dist/
 .DS_Store
 Thumbs.db
 
+# Env and config
+.env
+.env.*
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Editor files
+# VSCode
 .vscode/
-.idea/
-*.sublime-workspace
-*.sublime-project
 
-# Env files
-.env
-.env.*
+# Electron
+*.log
+*.tsbuildinfo
 
-# Mac system files
-.AppleDouble
-.LSOverride
+# Mac app build
+*.dmg
 
-# Electron builder cache
-.build/ 
+# Windows app build
+*.exe
+*.msi
+*.appx
+*.appxbundle
+*.asar
+
+# Linux app build
+*.AppImage
+*.snap
+*.deb
+*.rpm
+*.tar.gz 

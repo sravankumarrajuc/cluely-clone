@@ -1,0 +1,44 @@
+{
+  "name": "crypto-quest-overlay",
+  "version": "1.0.0",
+  "description": "Transparent overlay Electron app for live OpenAI answers, hidden from dock and screen sharing.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "build": {
+    "appId": "com.cryptoquest.overlay",
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        { "target": "dmg", "arch": ["x64", "arm64"] }
+      ],
+      "icon": "icon.icns",
+      "darkModeSupport": true,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "This app requires microphone access to capture your voice.",
+        "NSCameraUsageDescription": "This app requires screen recording access to capture your screen."
+      }
+    },
+    "win": {
+      "target": ["nsis"],
+      "icon": "icon.ico"
+    },
+    "linux": {
+      "target": ["AppImage"]
+    },
+    "files": [
+      "**/*",
+      "!favicon.png"
+    ],
+    "extraResources": [
+      "favicon.png"
+    ]
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^28.2.3",
+    "electron-builder": "^24.6.0"
+  }
+} 
