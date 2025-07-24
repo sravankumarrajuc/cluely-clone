@@ -175,6 +175,9 @@ startBtn.onclick = async () => {
     setStatus('Please enter your OpenAI API key and paste your resume.', 'error');
     return;
   }
+  if (window.electronAPI && window.electronAPI.setOverlayMode) {
+    window.electronAPI.setOverlayMode(true);
+  }
   startBtn.style.display = 'none';
   stopBtn.style.display = 'inline-block';
   setStatus('Ready. Press spacebar to record.', '');
@@ -209,6 +212,9 @@ startBtn.onclick = async () => {
     isInterviewing = false;
     startBtn.style.display = 'inline-block';
     stopBtn.style.display = 'none';
+    if (window.electronAPI && window.electronAPI.setOverlayMode) {
+      window.electronAPI.setOverlayMode(false);
+    }
   }
 };
 
@@ -228,6 +234,9 @@ stopBtn.onclick = () => {
   controlsSection.style.display = 'flex';
   showAnswerContainer(false);
   setMicActive(false);
+  if (window.electronAPI && window.electronAPI.setOverlayMode) {
+    window.electronAPI.setOverlayMode(false);
+  }
 };
 
 closeBtn.onclick = () => {

@@ -1,5 +1,5 @@
 {
-  "name": "crypto-quest-overlay",
+  "name": "cluely-clone",
   "version": "1.0.0",
   "description": "Transparent overlay Electron app for live OpenAI answers, hidden from dock and screen sharing.",
   "main": "main.js",
@@ -8,7 +8,7 @@
     "build": "electron-builder"
   },
   "build": {
-    "appId": "com.cryptoquest.overlay",
+    "appId": "com.cluelyclone.clone",
     "mac": {
       "category": "public.app-category.productivity",
       "target": [

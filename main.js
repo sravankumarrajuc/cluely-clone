@@ -1,4 +1,4 @@
-const { app, BrowserWindow, globalShortcut } = require('electron');
+const { app, BrowserWindow, globalShortcut, ipcMain } = require('electron');
 const path = require('path');
 
 let mainWindow;
@@ -13,8 +13,8 @@ function createWindow() {
     skipTaskbar: true,
     hasShadow: false,
     resizable: false,
-    focusable: false, // Not focusable
-    type: 'panel', // Try to make it less likely to be captured
+    focusable: true, // Start as focusable
+    type: 'panel',
     acceptFirstMouse: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -22,20 +22,42 @@ function createWindow() {
       contextIsolation: true
     }
   });
-  mainWindow.setContentProtection(true); // Prevent screen sharing/recording
+  mainWindow.setContentProtection(true);
   mainWindow.setIgnoreMouseEvents(false);
   mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   mainWindow.loadFile('index.html');
-  // Hide from dock (macOS)
   if (process.platform === 'darwin') app.dock.hide();
+
+  // IPC handlers for overlay mode
+  ipcMain.on('set-overlay-mode', (event, enable) => {
+    if (enable) {
+      mainWindow.setFocusable(false);
+      mainWindow.setIgnoreMouseEvents(true, { forward: true });
+    } else {
+      mainWindow.setFocusable(true);
+      mainWindow.setIgnoreMouseEvents(false);
+    }
+  });
 }
 
 app.whenReady().then(() => {
   createWindow();
-  // Global shortcut to toggle overlay (optional)
+  // Global shortcut to toggle overlay (improved)
   globalShortcut.register('CommandOrControl+Shift+O', () => {
-    if (mainWindow.isVisible()) mainWindow.hide();
-    else mainWindow.show();
+    if (!mainWindow.isVisible()) {
+      mainWindow.show();
+      // Always restore to focusable mode when shown
+      mainWindow.setFocusable(true);
+      mainWindow.setIgnoreMouseEvents(false);
+    } else {
+      // If visible and not focusable (overlay mode), restore to focusable
+      if (!mainWindow.isFocusable()) {
+        mainWindow.setFocusable(true);
+        mainWindow.setIgnoreMouseEvents(false);
+      } else {
+        mainWindow.hide();
+      }
+    }
   });
 });
 

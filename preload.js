@@ -1,5 +1,5 @@
-const { contextBridge } = require('electron');
+const { contextBridge, ipcRenderer } = require('electron');
  
 contextBridge.exposeInMainWorld('electronAPI', {
-  // Placeholder for future APIs (mic, screen, OpenAI)
+  setOverlayMode: (enable) => ipcRenderer.send('set-overlay-mode', enable)
 }); 
