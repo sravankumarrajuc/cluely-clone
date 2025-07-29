@@ -31,12 +31,19 @@ function createWindow() {
   // IPC handlers for overlay mode
   ipcMain.on('set-overlay-mode', (event, enable) => {
     if (enable) {
-      mainWindow.setFocusable(false);
+      // Keep focusable for keyboard events, but ignore mouse events
+      mainWindow.setFocusable(true);
       mainWindow.setIgnoreMouseEvents(true, { forward: true });
     } else {
       mainWindow.setFocusable(true);
       mainWindow.setIgnoreMouseEvents(false);
     }
+  });
+
+  // IPC handler for dragging the window
+  ipcMain.on('drag-window', (event, deltaX, deltaY) => {
+    const [x, y] = mainWindow.getPosition();
+    mainWindow.setPosition(x + deltaX, y + deltaY);
   });
 }
 
@@ -46,17 +53,12 @@ app.whenReady().then(() => {
   globalShortcut.register('CommandOrControl+Shift+O', () => {
     if (!mainWindow.isVisible()) {
       mainWindow.show();
-      // Always restore to focusable mode when shown
+      // Always restore to normal mode when shown
       mainWindow.setFocusable(true);
       mainWindow.setIgnoreMouseEvents(false);
     } else {
-      // If visible and not focusable (overlay mode), restore to focusable
-      if (!mainWindow.isFocusable()) {
-        mainWindow.setFocusable(true);
-        mainWindow.setIgnoreMouseEvents(false);
-      } else {
-        mainWindow.hide();
-      }
+      // If visible, just hide it
+      mainWindow.hide();
     }
   });
 });

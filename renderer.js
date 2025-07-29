@@ -14,10 +14,44 @@ const resumeInput = document.getElementById('resume-text');
 const statusIndicator = document.getElementById('status-indicator');
 const closeBtn = document.getElementById('close-overlay');
 const overlayContainer = document.getElementById('overlay-container');
-const controlsSection = document.querySelector('.controls-section');
+const controlsSection = document.getElementById('controls');
 const micToggleBtn = document.getElementById('mic-toggle');
 const micIcon = document.getElementById('mic-icon');
 const answerOuter = document.getElementById('answer-outer');
+const dragHandle = document.getElementById('drag-handle');
+
+// Drag functionality
+let isDragging = false;
+let dragOffset = { x: 0, y: 0 };
+
+dragHandle.addEventListener('mousedown', (e) => {
+  isDragging = true;
+  dragOffset.x = e.clientX;
+  dragOffset.y = e.clientY;
+  dragHandle.style.background = 'rgba(60,60,60,0.8)';
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!isDragging) return;
+  
+  const deltaX = e.clientX - dragOffset.x;
+  const deltaY = e.clientY - dragOffset.y;
+  
+  // Send drag message to main process
+  if (window.electronAPI && window.electronAPI.dragWindow) {
+    window.electronAPI.dragWindow(deltaX, deltaY);
+  }
+  
+  dragOffset.x = e.clientX;
+  dragOffset.y = e.clientY;
+});
+
+document.addEventListener('mouseup', () => {
+  if (isDragging) {
+    isDragging = false;
+    dragHandle.style.background = 'rgba(30,30,30,0.7)';
+  }
+});
 
 function setStatus(text, highlight) {
   statusIndicator.innerText = text;
@@ -155,6 +189,22 @@ function handleSpacebar(e) {
   }
 }
 
+// Global keyboard listener that works even when window is not focusable
+function handleGlobalKeydown(e) {
+  if (!isInterviewing) return;
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (!isRecording) {
+      startRecording();
+    } else {
+      stopRecording();
+    }
+  }
+}
+
+// Add global keyboard listener
+document.addEventListener('keydown', handleGlobalKeydown);
+
 micToggleBtn.onclick = () => {
   if (!isInterviewing) return;
   if (!isRecording) {
@@ -206,7 +256,8 @@ startBtn.onclick = async () => {
         await processAudioChunk(blob);
       }
     };
-    window.addEventListener('keydown', handleSpacebar);
+    // Remove the old window event listener since we're using document
+    // window.addEventListener('keydown', handleSpacebar);
   } catch (err) {
     setStatus('Mic error: ' + err.message, 'error');
     isInterviewing = false;
@@ -229,7 +280,8 @@ stopBtn.onclick = () => {
     stream.getTracks().forEach(track => track.stop());
     stream = null;
   }
-  window.removeEventListener('keydown', handleSpacebar);
+  // Remove the old window event listener since we're using document
+  // window.removeEventListener('keydown', handleSpacebar);
   answerContainer.innerText = 'Interview stopped.';
   controlsSection.style.display = 'flex';
   showAnswerContainer(false);
