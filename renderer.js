@@ -19,6 +19,7 @@ const micToggleBtn = document.getElementById('mic-toggle');
 const micIcon = document.getElementById('mic-icon');
 const answerOuter = document.getElementById('answer-outer');
 const dragHandle = document.getElementById('drag-handle');
+const providerSelect = document.getElementById('provider-select');
 
 // Drag functionality
 let isDragging = false;
@@ -139,15 +140,31 @@ async function processAudioChunk(blob) {
   whisperTranscribing = true;
   const apiKey = apiKeyInput.value.trim();
   const resume = resumeInput.value.trim();
+  const provider = providerSelect.value;
+  
   if (!apiKey || !resume) {
-    setStatus('Please enter your OpenAI API key and paste your resume.', 'error');
+    const providerName = provider === 'openai' ? 'OpenAI' : 'Gemini';
+    setStatus(`Please enter your ${providerName} API key and paste your resume.`, 'error');
     whisperTranscribing = false;
     return;
   }
-  const transcript = await sendToWhisper(blob, apiKey);
+  
+  let transcript = '';
+  if (provider === 'openai') {
+    transcript = await sendToWhisper(blob, apiKey);
+  } else if (provider === 'gemini') {
+    transcript = await sendToGeminiSpeech(blob, apiKey);
+  }
+  
   if (transcript && transcript !== lastTranscript) {
     lastTranscript = transcript;
-    const answer = await sendToGPT(transcript, resume, apiKey);
+    let answer = '';
+    if (provider === 'openai') {
+      answer = await sendToGPT(transcript, resume, apiKey);
+    } else if (provider === 'gemini') {
+      answer = await sendToGeminiChat(transcript, resume, apiKey);
+    }
+    
     if (answer) answerContainer.innerText = answer;
     else answerContainer.innerText = 'No answer.';
     setStatus('Ready. Press spacebar to record.', '');
@@ -221,8 +238,11 @@ startBtn.onclick = async () => {
   }
   const apiKey = apiKeyInput.value.trim();
   const resume = resumeInput.value.trim();
+  const provider = providerSelect.value;
+  
   if (!apiKey || !resume) {
-    setStatus('Please enter your OpenAI API key and paste your resume.', 'error');
+    const providerName = provider === 'openai' ? 'OpenAI' : 'Gemini';
+    setStatus(`Please enter your ${providerName} API key and paste your resume.`, 'error');
     return;
   }
   if (window.electronAPI && window.electronAPI.setOverlayMode) {
@@ -296,5 +316,86 @@ closeBtn.onclick = () => {
   setMicActive(false);
 };
 
+// Provider selection handling
+providerSelect.addEventListener('change', (e) => {
+  const provider = e.target.value;
+  if (provider === 'openai') {
+    apiKeyInput.placeholder = 'OpenAI API Key';
+  } else if (provider === 'gemini') {
+    apiKeyInput.placeholder = 'Gemini API Key';
+  }
+});
+
+// Gemini API functions
+async function sendToGeminiSpeech(blob, apiKey) {
+  setStatus('Transcribing...', '');
+  
+  // Convert blob to base64 for Gemini API
+  const arrayBuffer = await blob.arrayBuffer();
+  const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+  
+  try {
+    const response = await fetch(`https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        config: {
+          encoding: 'WEBM_OPUS',
+          sampleRateHertz: 48000,
+          languageCode: 'en-US'
+        },
+        audio: {
+          content: base64Audio
+        }
+      })
+    });
+    
+    if (!response.ok) throw new Error('Gemini Speech API error');
+    const data = await response.json();
+    
+    if (data.results && data.results.length > 0) {
+      return data.results[0].alternatives[0].transcript;
+    }
+    return '';
+  } catch (err) {
+    setStatus('Gemini Speech error: ' + err.message, 'error');
+    return '';
+  }
+}
+
+async function sendToGeminiChat(question, resume, apiKey) {
+  setStatus('Getting answer...', '');
+  const systemPrompt = `You are helping in a live interview. Use the following resume to answer as if you are the candidate. Ignore any unrelated speech or background talk. Focus on the actual interview question and answer smartly as per the resume.\n\nResume:\n${resume}`;
+  
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: `${systemPrompt}\n\nQuestion: ${question}`
+          }]
+        }]
+      })
+    });
+    
+    if (!response.ok) throw new Error('Gemini Chat API error');
+    const data = await response.json();
+    
+    if (data.candidates && data.candidates.length > 0) {
+      return data.candidates[0].content.parts[0].text.trim();
+    }
+    return '';
+  } catch (err) {
+    setStatus('Gemini Chat error: ' + err.message, 'error');
+    return '';
+  }
+}
+
 // On load, hide answer container
-showAnswerContainer(false); 
+showAnswerContainer(false);
